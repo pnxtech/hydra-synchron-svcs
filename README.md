@@ -1,5 +1,5 @@
 # hydra-synchron-svcs
-Hydra synchronization Service
+A [Hydra-based](https://github.com/pnxtech/hydra) synchronization Service
 
 ## Raison d'être
 This service exists to solve the following key distributed computing problem.
@@ -15,7 +15,7 @@ The Hydra-synchron-svcs seeks to address this problem for all services within a 
 
 * Tasks are registered with the Synchron service.
 * Tasks can be registered by a sending service for itself or another service.
-* A task is a UMF message with an embedded UMF sub-message.
+* A task is a [UMF message](https://github.com/pnxtech/umf/blob/master/umf.md) with an embedded UMF sub-message.
 * Tasks have an execution rule which defines when and how messages are sent to a service.
 * All tasks are stored in a MongoDB database allowing for the synchron service to be restarted.
 * When a task is ready for execution, Synchron can either use a `hydra.sendMessage` or `hydra.queueMessage` to notify the intended recipient service.  The notification is essentially just the registered sub-message.
@@ -119,4 +119,4 @@ The `every` word can be omitted or optionally replaced with the word `in` to cre
 ## Additional requirements
 * Task messages must be sent to the Synchron service via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
   * This does not apply to the execution of tasks which do support both queuing and sending.
-* All task message must be in UMF format.
+* All task message must be in ["short-form" UMF format](https://github.com/pnxtech/umf/blob/master/umf.md#6-short-form-syntax).
