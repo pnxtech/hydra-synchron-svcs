@@ -1,5 +1,5 @@
 # hydra-synchron-svcs
-A [Hydra-based](https://github.com/pnxtech/hydra) synchronization Service
+A [Hydra-based](https://github.com/pnxtech/hydra) Synchronization Service
 
 <img src="assets/synchron.png" width="300px" />
 
@@ -19,7 +19,7 @@ Consider:
   * If you put a timer inside of a microservice so that it can execute periodic tasks - then how do you prevent multiple instances of that service for each performing the same periodic task?
   * How do you ensure that the scheduled task executes on time?
 
-Why not just use a job service? With Hydra, job / task queuing is present by default.  So microservices can queue jobs for themselves or each other - at will.  The problem this service solves is one of the creation and management of system-wide periodic orchestration events.
+Why not just use a job service? With Hydra, job / task queuing is present by default.  So microservices can queue tasks for themselves or each other - at will.  The problem this service solves is one of the creation and management of system-wide periodic orchestration events.
 
 ## How it works:
 
@@ -171,6 +171,10 @@ A registered task may be suspended using the taskID recieved during the registra
 
 The same response above is returned to the sender upon successful suspension.
 
+The `to` and `frm` fields are reversed upon receipt.
+
+If an error occurs the bdy.taskID will blank since no task was registered, and an bdy.error will indicated the error encounted.
+
 #### synchron.resume
 
 A registered and previously suspended task may be resumed using the taskID recieved during the registration process.
@@ -188,6 +192,10 @@ A registered and previously suspended task may be resumed using the taskID recie
 ```
 
 The same response above is returned to the sender upon successful resuming of a previously suspended task.
+
+The `to` and `frm` fields are reversed upon receipt.
+
+If an error occurs the bdy.taskID will be retained and an bdy.error will indicated the error encounted.
 
 #### synchron.status
 
@@ -226,6 +234,10 @@ Status messages:
 * `suspended`: Suspended means that the task was queued but currently suspended.
 * `not found`: Not found means that either the task does not exists given the supplied taskID or the task was an execute "once" task which was completed and thus no longer exists.
 
+The `to` and `frm` fields are reversed upon receipt.
+
+If an error occurs the bdy.taskID will be retained and an bdy.error will indicated the error encounted.
+
 ## Rules
 
 During a task registration process the UMF.bdy field must contain a `rule` object.
@@ -262,6 +274,9 @@ The `every` word can be omitted or optionally replaced with the word `in` to cre
 * in 2 days
 * in 1 month
 
+> Important: When using tasks frequencies of under a minute (i.e. seconds) keep in mind that the time a task is set to execute is dependant on when it was recieved by the Synchron service and not when it was sent by the sending service.  Although message queuing occurs in sub-millisecond timeframes, a heavily overloaded system might encounter latencies.  Your system level load testing should help you identify latencies in your specific applications.
+
+
 #### sendType
 
 The `sendType` field can be set to either `queue` or `send`.  This cooresponds to the use of either Hydra Queuing or Hydra SendMessage.
@@ -276,6 +291,37 @@ The `updateMid` field is optional and defaults to `true`.  When true, the field 
 
 The `updateFrm` fields is also optional and defaults to `true`. When true, the field will be updated to indicate that the message is originating from the `hydra-synchron-svcs:/` service.  Set `updateFrm` to false if you want to retain the original sender's service route.
 ## Executable Task
+
+As we've seen earlier, an executable task consists of both a `rule` and a `message`.
+
+```javascript
+{
+  "to": "hydra-synchron-svcs:/",
+  "frm": "some-other-svcs:/",
+  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
+  "typ": "synchron.register",
+  "bdy": {
+    "rule": {
+      "frequency": "every 15 hours",
+      "sendType": "queue",
+      "broadcast": false,
+      "updateMid": true,
+      "updateFrm": true,
+    },
+    "message": {
+      "to": "some-other-svcs:/",
+      "frm": "some-other-svcs:/",
+      "mid": "4a2c6968-90d7-4ede-b2d4-9c768ce46d49",
+      "typ": "perform.sweep",
+      "bdy": {
+        "actions": {}
+      }
+    }
+  }
+}
+```
+
+> Important: It's important that the message remain relatively small (ideally under 256K) because the underlying queuing is implemented using Redis Pub/Sub.  In order to keep your task messages small, consider using a reference indicating which points to a data store your service is using.
 
 ## Additional requirements
 
