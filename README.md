@@ -97,6 +97,7 @@ Here's fragment from the example we saw earlier:
 
 The required fields are `frequency` and `sendType`.  The `broadcast`, `updateMid` and `updateFrm` fields are optional.
 
+#### frequency
 The `frequency` field contains simple English phrases such as:
 
 * every 10 seconds
@@ -113,7 +114,17 @@ The `every` word can be omitted or optionally replaced with the word `in` to cre
 * in 2 days
 * in 1 month
 
+#### sendType
+The `sendType` field can be set to either `queue` or `send`.  This cooresponds to the use of either Hydra Queuing or Hydra SendMessage.
 
+When omitted: `broadcast` is set to false, and the `updateMid` and `updateFrm` fields are set to true.
+
+> Important: when `sendType` is set to `queue` then `broadcast` is automatically set to `false` since broadcasting only applies to Hydra.sendMessage and doesn't apply to queuing.
+
+#### update fields
+The `updateMid` field is optional and defaults to `true`.  When true, the field will be updated with a new MID upon execution.
+
+The `updateFrm` fields is also optional and defaults to `true`. When true, the field will be updated to indicate that the message is originating from the `hydra-synchron-svcs:/` service.  Set `updateFrm` to false if you want to retain the original sender's service route.
 ## Executable Task
 
 ## Additional requirements
