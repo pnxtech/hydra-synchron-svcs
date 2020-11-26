@@ -67,33 +67,35 @@ class Processor {
   }
 
   /**
-   * @name queueRegistrationSuccess
+   * @name queueSuccess
    * @description queue a reply message for the sender with success
    * @param {object} message - response message
    * @return {undefined}
    */
-  async queueRegistrationSuccess(message) {
+  async queueSuccess(message) {
     let reply = hydra.createUMFMessage({
       to: message.frm,
       frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
-      typ: 'synchron.register',
+      typ: message.typ,
       bdy: message.bdy
     }).toShort();
     await hydra.queueMessage(reply);
   }
 
   /**
-   * @name queueRegistrationError
+   * @name queueError
    * @description queue a reply message for the sender with an error
    * @param {object} message - original message
    * @param {string} errorText - error string
    * @return {undefined}
    */
-  async queueRegistrationError(message, errorText) {
+  async queueError(message, errorText) {
     let reply = hydra.createUMFMessage({
-      to: message.to,
+      to: message.frm,
       frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+      typ: message.typ,
       bdy: {
+        taskID: message.bdy.taskID,
         error: errorText
       }
     }).toShort();
@@ -112,16 +114,16 @@ class Processor {
     let segs = feq.split(' ');
     if (segs.length === 2) {
       result['oneTime'] = true;
-      result['offset'] = segs.join(' ');
+      result['offset'] = segs;
     } else {
       if (segs[0] === 'in') {
         segs.shift();
         result['oneTime'] = true;
-        result['offset'] = segs.join(' ');
+        result['offset'] = segs;
       } else if (segs[0] === 'every') {
         segs.shift();
         result['oneTime'] = false;
-        result['offset'] = segs.join(' ');
+        result['offset'] = segs;
       }
     }
     return result;
@@ -135,14 +137,13 @@ class Processor {
    */
   async handleRegister(message) {
     if (!message.bdy.message) {
-      this.queueRegistrationError(message, 'missing bdy.message');
+      this.queueError(message, 'missing bdy.message');
     } else if (message.bdy.rule) {
       let rule = message.bdy.rule;
-      let now = moment();
+      let offset = moment();
       let parsedFrequency = this.parseFrequency(rule.frequency);
       if (parsedFrequency['oneTime'] !== undefined) {
-        let oneTime = parsedFrequency['oneTime'];
-        let offset = now.add(rule.frequency);
+        offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
         let updateMid = rule.updateMid || true;
         let updateFrm = rule.updateFrm || true;
         let broadcast = rule.broadcast || false;
@@ -154,8 +155,8 @@ class Processor {
           taskID: uuid.v4(),
           targetTime: offset.toISOString(),
           rule: {
+            frequency: parsedFrequency,
             sendType,
-            oneTime,
             broadcast,
             updateMid,
             updateFrm
@@ -169,13 +170,13 @@ class Processor {
           response.bdy = {
             taskID: doc.taskID
           };
-          await this.queueRegistrationSuccess(response);
+          await this.queueSuccess(response);
         } catch(e) {
           hydraExpress.log('error', e);
         }
       }
     } else {
-      this.queueRegistrationError(message, 'missing bdy.rule');
+      this.queueError(message, 'missing bdy.rule');
     }
     await hydra.markQueueMessage(message, true);
   }
