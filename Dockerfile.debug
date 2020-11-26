@@ -1,0 +1,8 @@
+FROM node:12
+LABEL maintainer="Carlos Justiniano cjus@ieee.org"
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+ADD . /usr/src/app
+RUN echo "package-lock=false" > .npmrc
+RUN npm install --production
+CMD tail -f /dev/null

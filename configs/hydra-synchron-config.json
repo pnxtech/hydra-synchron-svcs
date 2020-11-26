@@ -1,0 +1,21 @@
+{
+  "mongodb": {
+    "connectionString": "mongodb://mongo/synchron"
+  },
+  "hydra": {
+    "serviceName": "hydra-synchron-svcs",
+    "serviceIP": "",
+    "servicePort": 11111,
+    "serviceType": "Queuing",
+    "serviceDescription": "Hydra Synchronization Service",
+    "plugins": {
+      "hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
+      }
+    },
+    "redis": {
+      "url": "redis://redis:6379/15"
+    }
+  }
+}
