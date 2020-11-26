@@ -1,2 +1,2 @@
-# hydra-queue-scheduler-svcs
-Hydra Queue Scheduler Service
+# hydra-synchron-svcs
+Hydra synchronization Service
