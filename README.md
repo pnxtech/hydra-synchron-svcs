@@ -117,5 +117,6 @@ The `every` word can be omitted or optionally replaced with the word `in` to cre
 ## Executable Task
 
 ## Additional requirements
-* Task messages must be send via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
+* Task messages must be sent to the Synchron service via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
+  * This does not apply to the execution of tasks which do support both queuing and sending.
 * All task message must be in UMF format.
