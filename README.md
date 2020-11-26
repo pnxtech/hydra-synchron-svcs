@@ -65,7 +65,7 @@ Here's an example of the message that would be queued for the `some-other-svcs` 
 ```
 
 ## Task Types
-Synchron can be sent four types of tasks.
+Synchron can be sent one of the following types of tasks.
 
 | Type | Usage |
 |------|-------|
@@ -73,13 +73,49 @@ Synchron can be sent four types of tasks.
 | synchron.deregister | Remove a registered task |
 | synchron.suspend | Suspect a registered task |
 | synchron.resume | Resume a registered task |
+| synchron.status | Get the status of a registered task |
 
 #### synchron.register
 #### synchron.deregister
 #### synchron.suspend
 #### synchron.resume
-
+#### synchron.status
 ## Rules
+During a task registration process the UMF.bdy field must contain a `rule` object.
+Here's fragment from the example we saw earlier:
+
+```javascript
+  "bdy": {
+    "rule": {
+      "frequency": "every 15 hours",
+      "sendType": "queue",
+      "broadcast": false,
+      "updateMid": true,
+      "updateFrm": true,
+    },
+```
+
+The required fields are `frequency` and `sendType`.  The `broadcast`, `updateMid` and `updateFrm` fields are optional.
+
+The `frequency` field contains simple English phrases such as:
+
+* every 10 seconds
+* every 1 minute
+* every 15 hours
+* every 2 days
+* every 1 month
+
+The `every` word can be omitted or optionally replaced with the word `in` to create a task that executes only once at the specified duration.
+
+* in 10 seconds
+* in 1 minute
+* in 15 hours
+* in 2 days
+* in 1 month
+
 
 ## Executable Task
 
+## Additional requirements
+* Task messages must be send via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
+* All task message must be in UMF format.
