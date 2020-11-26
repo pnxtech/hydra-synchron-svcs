@@ -27,7 +27,7 @@ Here's an example of a registration message:
       "sendType": "queue",
       "broadcast": false,
       "updateMid": true,
-      "updateFrm": true,
+      "updateFrm": true
     },
     "message": {
       "to": "some-other-svcs:/",
@@ -85,7 +85,7 @@ The registration process consists of queuing a message for the `hydra-sychron-sv
       "sendType": "queue",
       "broadcast": false,
       "updateMid": true,
-      "updateFrm": true,
+      "updateFrm": true
     },
     "message": {
       "to": "some-other-svcs:/",
@@ -231,7 +231,7 @@ Here's fragment from the example we saw earlier:
       "sendType": "queue",
       "broadcast": false,
       "updateMid": true,
-      "updateFrm": true,
+      "updateFrm": true
     },
 ```
 
@@ -287,7 +287,7 @@ As we've seen earlier, an executable task consists of both a `rule` and a `messa
       "sendType": "queue",
       "broadcast": false,
       "updateMid": true,
-      "updateFrm": true,
+      "updateFrm": true
     },
     "message": {
       "to": "some-other-svcs:/",
