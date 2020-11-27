@@ -4,7 +4,7 @@
 
 ## How it works:
 
-The Hydra-synchron-svcs seeks to address this problem for all services within a cluster using the following methods:
+The Hydra-synchron-svcs implements these features:
 
 * Tasks are registered with the Synchron service.
 * Tasks can be registered by a sending service for itself or another service.

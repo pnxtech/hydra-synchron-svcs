@@ -1,13 +1,13 @@
 # hydra-synchron-svcs
-A [Hydra-based](https://github.com/pnxtech/hydra) Synchronization Service
+A [Hydra-based](https://github.com/pnxtech/hydra) Synchronization Service.
+
+Supporting delayed message dispatching for periodic task seqeuencing and job scheduling. Backed by MongoDB.
 
 <img src="documentation/assets/synchron.png" width="300px" />
 
 ## Intended use
 
-The Synchron service is intended for use in its docker container form and deployed to a Docker Swarm or Kubernetes cluster.
-
-Available container images are hosted on [Docker Hub](https://hub.docker.com/repository/docker/pnxtech/hydra-synchron-svcs).
+The Synchron service is intended for use in its docker container form and deployed to a Docker Swarm or Kubernetes cluster. Available container images are hosted on [Docker Hub](https://hub.docker.com/repository/docker/pnxtech/hydra-synchron-svcs).
 
 ## Raison d'être
 
