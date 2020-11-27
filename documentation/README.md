@@ -12,6 +12,7 @@ The Hydra-synchron-svcs implements these features:
 * Tasks have an execution rule which defines when and how messages are sent to a service.
 * All tasks are stored in a Mongo database allowing for the synchron service to be restarted.
 * When a task is ready for execution, Synchron can either use a `hydra.sendMessage` or `hydra.queueMessage` to notify the intended recipient service.  The notification is essentially just the registered sub-message.
+* Tasks can be registered (created), deregistered (deleted), suspended, resumed, and their status can be queried.  However, tasks are immutable. If you need to update a task you should deregister it and then register a new one.
 
 Here's an example of a registration message:
 
@@ -68,6 +69,8 @@ Synchron can be sent one of the following types of tasks.
 | synchron.suspend | Suspect a registered task |
 | synchron.resume | Resume a registered task |
 | synchron.status | Get the status of a registered task |
+
+> Important: synchron tasks are immutable. If you find that need to update an existing registered task you should deregister the task and register a new one.
 
 #### synchron.register
 
