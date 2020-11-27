@@ -49,7 +49,7 @@ class MongoDB {
    * @returns {object} collection
    */
   getCollection(collectionName) {
-    return this.client.db().collection(collectionName);
+    return this.getDB.collection(collectionName);
   }
 }
 
