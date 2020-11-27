@@ -15,12 +15,43 @@ class Processor {
    * @param {object} config - configuration object
    * @return {undefined}
    */
-  init(config) {
+  async init(config) {
     this.config = config;
     this.messageCheckDelay = 0;
     this.lastExecutionSweep = ((new Date()).getTime() / 1000) | 0;
+    this.taskColl = mdb.getCollection('tasks');
+
+    await this.refreshTasksOnLoad();
     this.checkForTasks();
     this.checkForExecutableTasks();
+  }
+
+  /**
+   * @name refreshTasksOnLoad
+   * @description Refresh tasks in DB upon start of this class
+   * @return {promise}
+   */
+  async refreshTasksOnLoad() {
+    const cursor = await this.taskColl.find({
+      suspended: false
+    }, {
+      projection: {
+        taskID: 1,
+        targetTime: 1,
+        rule: 1
+      }
+    });
+    await cursor.forEach(async (task) => {
+      let offset = moment();
+      offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
+      task.targetTime = new Date(offset.toISOString());
+      delete task.rule;
+      await this.taskColl.updateOne({
+        taskID: task.taskID
+      },{
+        $set: task
+      });
+    });
   }
 
   /**
@@ -79,16 +110,15 @@ class Processor {
       let nowts = ((new Date()).getTime() / 1000) | 0;
       topRange.subtract(nowts - this.lastExecutionSweep, 'seconds');
 
-      const taskColl = mdb.getCollection('tasks');
-      let tasks = await taskColl.find({
+      const cursor = await this.taskColl.find({
         targetTime: {
           "$gt": new Date(topRange.toISOString()),
           "$lt": new Date(now.toISOString())
         },
         suspended: false
-      }).toArray();
-
-      for await (let task of tasks) {
+      });
+      await cursor.forEach(async (task) => {
+        hydraExpress.log('trace', `Executing task: ${task.taskID} based on rule: ${JSON.stringify(task.rule)}`);
         let mid = (task.rule.updateMid) ? uuid.v4() : task.message.mid;
         let frm = (task.rule.updateFrm) ? `${hydra.getInstanceID()}@${hydra.getServiceName()}:/` : task.message.frm;
         task.message = Object.assign({}, task.message, {
@@ -107,15 +137,17 @@ class Processor {
         }
 
         if (task.rule.frequency.oneTime) {
-          await taskColl.deleteOne({
+          await this.taskColl.deleteOne({
             taskID: task.taskID
           });
+          hydraExpress.log('trace', `Deregistered onetime task ${task.taskID}`);
         } else {
           let offset = moment();
           offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
           task.targetTime = new Date(offset.toISOString());
+          task.lastExecution = new Date(now.toISOString());
           delete task.rule;
-          await taskColl.updateOne({
+          await this.taskColl.updateOne({
             taskID: task.taskID
           },{
             $set: task
@@ -123,9 +155,9 @@ class Processor {
             upsert: true
           });
         }
-      }
-    } catch (e) {
-      hydraExpress.log('fatal', e);
+      });
+    } catch(e) {
+
     }
     setTimeout(async () => {
       await this.checkForExecutableTasks();
@@ -248,13 +280,13 @@ class Processor {
           message: Object.assign({}, message.bdy.message)
         };
         try {
-          const taskColl = mdb.getCollection('tasks');
-          await taskColl.insertOne(doc);
+          await this.taskColl.insertOne(doc);
           let response = Object.assign({}, message);
           response.bdy = {
             taskID: doc.taskID
           };
           await this.queueSuccess(response);
+          hydraExpress.log('trace', `Registered task ${doc.taskID} with rule: ${JSON.stringify(doc.rule)}`);
         } catch(e) {
           hydraExpress.log('error', e);
         }
@@ -272,6 +304,31 @@ class Processor {
    * @return {undefined}
    */
   async handleDeregister(message) {
+    if (!message.bdy.taskID) {
+      this.queueError(message, 'missing bdy.taskID');
+      return;
+    }
+    let task = await this.taskColl.findOne({
+      taskID: message.bdy.taskID
+    }, {
+      projection: {
+        taskID: 1
+      }
+    });
+    if (!task) {
+      this.queueError(message, 'task not found');
+    } else {
+      let result = await this.taskColl.deleteOne({
+        taskID: task.taskID
+      });
+      if (!result || !result.result.ok) {
+        this.queueError(message, 'task already deregistered');
+      } else {
+        let response = Object.assign({}, message);
+        await this.queueSuccess(response);
+        hydraExpress.log('trace', `Deregistered task ${task.taskID}`);
+      }
+    }
     await hydra.markQueueMessage(message, true);
   }
 
@@ -282,6 +339,35 @@ class Processor {
    * @return {undefined}
    */
   async handleSuspend(message) {
+    if (!message.bdy.taskID) {
+      this.queueError(message, 'missing bdy.taskID');
+      return;
+    }
+    let task = await this.taskColl.findOne({
+      taskID: message.bdy.taskID
+    }, {
+      projection: {
+        taskID: 1
+      }
+    });
+    if (!task) {
+      this.queueError(message, 'task not found');
+    } else {
+      let result = await this.taskColl.updateOne({
+        taskID: message.bdy.taskID
+      },{
+        $set: {
+          suspended: true
+        }
+      });
+      if (!result || !result.result.nModified) {
+        this.queueError(message, 'task already suspended');
+      } else {
+        let response = Object.assign({}, message);
+        await this.queueSuccess(response);
+        hydraExpress.log('trace', `Suspending task ${message.bdy.taskID}`);
+      }
+    }
     await hydra.markQueueMessage(message, true);
   }
 
@@ -292,6 +378,39 @@ class Processor {
    * @return {undefined}
    */
   async handleResume(message) {
+    if (!message.bdy.taskID) {
+      this.queueError(message, 'missing bdy.taskID');
+      return;
+    }
+    let task = await this.taskColl.findOne({
+      taskID: message.bdy.taskID
+    }, {
+      projection: {
+        taskID: 1,
+        rule: 1
+      }
+    });
+    if (!task) {
+      this.queueError(message, 'task not found');
+    } else {
+      let offset = moment();
+      offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
+      let result = await this.taskColl.updateOne({
+        taskID: message.bdy.taskID
+      },{
+        $set: {
+          suspended: false,
+          targetTime: new Date(offset.toISOString())
+        }
+      });
+      if (!result || !result.result.nModified) {
+        this.queueError(message, 'task already resumed');
+      } else {
+        let response = Object.assign({}, message);
+        await this.queueSuccess(response);
+        hydraExpress.log('trace', `Resuming task ${message.bdy.taskID}, scheduled to execute at ${offset.toISOString()}`);
+      }
+    }
     await hydra.markQueueMessage(message, true);
   }
 
@@ -302,6 +421,28 @@ class Processor {
    * @return {undefined}
    */
   async handleStatus(message) {
+    if (!message.bdy.taskID) {
+      this.queueError(message, 'missing bdy.taskID');
+      return;
+    }
+    let task = await this.taskColl.findOne({
+        taskID: message.bdy.taskID
+      }, {
+        projection: {
+          _id: 0,
+          rule: 0,
+          message: 0
+        }
+    });
+    if (!task) {
+      this.queueError(message, 'task not found');
+    } else {
+      let response = Object.assign({}, message);
+      response.bdy = task;
+      await this.queueSuccess(response);
+      hydraExpress.log('trace', `Status requested for task ${message.bdy.taskID}: ${JSON.stringify(task)}`);
+      console.log(JSON.stringify(response, null, 2));
+    }
     await hydra.markQueueMessage(message, true);
   }
 

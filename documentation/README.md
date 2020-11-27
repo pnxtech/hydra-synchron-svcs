@@ -198,22 +198,20 @@ The sending service will be sent a returned message with the status of the task:
 
 ```javascript
 {
-  "to": "some-other-svcs:/",
+  "to": "client:/",
   "frm": "hydra-synchron-svcs:/",
-  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
+  "mid": "89964657-ec2c-44a0-baec-d983c42cbd21",
+  "ts": "2020-11-27T18:04:32.503Z",
   "typ": "synchron.status",
+  "ver": "UMF/1.4.6",
   "bdy": {
     "taskID": "bde3cead-74af-47f5-a0f5-de7d4f436324",
-    "status": "one of the status messages below"
+    "targetTime": "2020-11-27T18:04:36.162Z",
+    "suspended": false,
+    "lastExecution": "2020-11-27T18:04:31.159Z"
   }
 }
 ```
-
-Status messages:
-
-* `queued`: Queued means that the task was queued and set to execute when ready.
-* `suspended`: Suspended means that the task was queued but currently suspended.
-* `not found`: Not found means that either the task does not exists given the supplied taskID or the task was an execute "once" task which was completed and thus no longer exists.
 
 The `to` and `frm` fields are reversed upon receipt.
 
