@@ -243,21 +243,39 @@ The required fields are `frequency` and `sendType`.  The `broadcast`, `updateMid
 The `frequency` field contains simple English phrases such as:
 
 * every 10 seconds
-* every 1 minute
+* every 1 minutes
 * every 15 hours
 * every 2 days
-* every 1 month
+* every 1 months
 
 The `every` word can be omitted or optionally replaced with the word `in` to create a task that executes only once at the specified duration.
 
 * in 10 seconds
-* in 1 minute
+* in 1 minutes
 * in 15 hours
 * in 2 days
-* in 1 month
+* in 1 months
 
-> Important: When using tasks frequencies of under a minute (i.e. seconds) keep in mind that the time a task is set to execute is dependant on when it was recieved by the Synchron service and not when it was sent by the sending service.  Although message queuing occurs in sub-millisecond timeframes, a heavily overloaded system might encounter latencies.  Your system level load testing should help you identify latencies in your specific applications.
+> Important: the plural form of time should be used even when the duration is singular.  So `1 second` should be `1 seconds`.
 
+Synchron uses the moment.js library to implement the above functionality.
+
+| Key	| Shorthand |
+|---|---|
+| years |	y |
+| quarters | Q|
+| months | M |
+| weeks	| w |
+| days | d |
+| hours	| h |
+| minutes	| m |
+| seconds	| s |
+
+Above from the [Moment.js](https://momentjs.com/docs/#/manipulating/add/) documentation
+
+> Important: The use of tasks frequencies of under a second (i.e. milliseconds) is NOT supported.
+
+> Additionally: When using frequencies of under a minute (i.e. seconds) keep in mind that the time a task is set to execute is dependant on when it was recieved by the Synchron service and not when it was sent by the sending service.  Although message queuing occurs in sub-millisecond timeframes, a heavily overloaded system might encounter latencies.  Your load testing efforts should help you identify latencies in your specific applications and architectures.
 
 #### sendType
 
