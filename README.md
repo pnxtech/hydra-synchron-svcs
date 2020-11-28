@@ -23,7 +23,7 @@ Consider:
   * If you put a timer inside of a microservice so that it can execute periodic tasks - then how do you prevent multiple instances of that service from each performing the same periodic task?
   * How do you ensure that the scheduled task executes on time?
 
-Why not just use a job service? With Hydra, job / task queuing is present by default.  So microservices can queue tasks for themselves or each other - at will.  The problem this service solves is one of the creation and management of system-wide periodic orchestration events.
+Why not just use a job service? With Hydra, the ability to create jobs/tasks queuing are present by default.  So microservices can queue messages for themselves or each other - at will.  The problem this service solves is one of the creation and management of system-wide periodic orchestration events.
 
 ### Intrigued?
 See the full [documentation](./documentation/README.md).

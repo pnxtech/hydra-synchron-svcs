@@ -60,9 +60,9 @@ Here's an example of the message that would be queued for the `some-other-svcs` 
 
 ## Task Types
 
-Synchron can be sent one of the following types of tasks.
+Synchron can be sent one of the following types of messages.
 
-| Type | Usage |
+| Message Type | Usage |
 |------|-------|
 | synchron.register | First time registration of a task |
 | synchron.deregister | Remove a registered task |
@@ -327,4 +327,4 @@ As we've seen earlier, an executable task consists of both a `rule` and a `messa
 
 * Task messages must be sent to the Synchron service via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
   * This does not apply to the execution of tasks which do support both queuing and sending.
-* All task message must be in ["short-form" UMF format](https://github.com/pnxtech/umf/blob/master/umf.md#6-short-form-syntax).
+* All task messages must be in ["short-form" UMF format](https://github.com/pnxtech/umf/blob/master/umf.md#6-short-form-syntax).
