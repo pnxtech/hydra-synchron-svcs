@@ -9,7 +9,7 @@ Supporting delayed message dispatching for periodic task sequencing and job sche
 
 The Synchron service is intended for use in its docker container form and deployed to a Docker Swarm or Kubernetes cluster. Available container images are hosted on [Docker Hub](https://hub.docker.com/repository/docker/pnxtech/hydra-synchron-svcs).
 
-Recommended release: `pnxtech/hydra-synchron-svcs:1.0.0`
+Recommended release: `pnxtech/hydra-synchron-svcs:1.0.1`
 
 #### Infrastructure requirements
 Synchron is a Hydra microservice and so an accessible instance of Redis is required.  Additionally, Synchron required an accessible instance of MongoDB.
