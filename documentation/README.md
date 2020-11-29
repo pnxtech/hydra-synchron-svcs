@@ -119,6 +119,8 @@ The register task will create a new task entry (with a task ID) and store it in 
 
 The returned bdy.taskID is the ID of the registered task entry.   The calling service should retain that taskID value if it needs to deregister, suspend, resume or request the status of a registered task.
 
+> Note, as of version 1.0.2: every executed task also receives a bdy.taskID.  This allows the recieving service to take control of task execution even if it wasn't the service that created the task.
+
 #### synchron.deregister
 
 A registered task may be deregistered using the taskID recieved during the registration process.

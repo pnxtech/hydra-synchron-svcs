@@ -125,7 +125,9 @@ class Processor {
           mid,
           frm
         });
-
+        task.message.bdy = Object.assign({}, task.message.bdy, {
+          taskID: task.taskID
+        });
         if (task.rule.sendType === 'queue') {
           await hydra.queueMessage(task.message);
         } else if (task.rule.sendType === 'send') {

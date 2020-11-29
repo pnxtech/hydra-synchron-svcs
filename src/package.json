@@ -1,6 +1,6 @@
 {
   "name": "hydra-synchron-svcs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Hydra Syncronization Service",
   "main": "index.js",
   "scripts": {
