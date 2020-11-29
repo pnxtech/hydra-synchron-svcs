@@ -1,7 +1,7 @@
 # hydra-synchron-svcs
 A [Hydra-based](https://github.com/pnxtech/hydra) Synchronization Service.
 
-Supporting delayed message dispatching for periodic task seqeuencing and job scheduling. Backed by MongoDB.
+Supporting delayed message dispatching for periodic task sequencing and job scheduling. Backed by MongoDB.
 
 <img src="documentation/assets/synchron.png" width="300px" />
 
