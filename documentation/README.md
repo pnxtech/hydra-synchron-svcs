@@ -8,6 +8,7 @@ The Hydra-synchron-svcs implements these features:
 
 * Tasks are registered with the Synchron service.
 * Tasks can be registered by a sending service for itself or another service.
+  * Synchron can recieve tasks via either send message or queue message from a sending service.
 * A task is a [UMF message](https://github.com/pnxtech/umf/blob/master/umf.md) with an embedded UMF sub-message.
 * Tasks have an execution rule which defines when and how messages are sent to a service.
 * All tasks are stored in a Mongo database allowing for the synchron service to be restarted.
@@ -43,7 +44,7 @@ Here's an example of a registration message:
 }
 ```
 
-Here's an example of the message that would be queued for the `some-other-svcs` microservice, every 15 hours.
+Here's an example of the message that would be sent / queued for the `some-other-svcs` microservice, every 15 hours.
 
 
 ```javascript
@@ -71,6 +72,8 @@ Synchron can be sent one of the following types of messages.
 | synchron.status | Get the status of a registered task |
 
 > Important: synchron tasks are immutable. If you find that need to update an existing registered task you should deregister the task and register a new one.
+
+> Important: synchron supports receiving tasks and task query messages via either send message or queue message.  However, regardless of wether a sent or queued message is used, the response will currently be queued for the sender. This mean that if send message is used, a returned response via send will not be sent - instead the response is queued.  Also using send message is supported as a convenience, messaging queuing is recommended.
 
 #### synchron.register
 
@@ -327,6 +330,5 @@ As we've seen earlier, an executable task consists of both a `rule` and a `messa
 
 ## Additional requirements
 
-* Task messages must be sent to the Synchron service via Hydra Queuing.  HTTP or Hydra Send Messaging is not currently supported.
-  * This does not apply to the execution of tasks which do support both queuing and sending.
+* Task messages must be sent to the Synchron service via Hydra Sending or Queuing.  Synchron does not currently have an HTTP endpoint.
 * All task messages must be in ["short-form" UMF format](https://github.com/pnxtech/umf/blob/master/umf.md#6-short-form-syntax).

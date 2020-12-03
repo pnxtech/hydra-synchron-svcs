@@ -21,6 +21,10 @@ class Processor {
     this.lastExecutionSweep = ((new Date()).getTime() / 1000) | 0;
     this.taskColl = mdb.getCollection('tasks');
 
+    hydra.on('message', async(message) => {
+      await this.dispatchMessage(message);
+    });
+
     await this.refreshTasksOnLoad();
     this.checkForTasks();
     this.checkForExecutableTasks();
@@ -68,25 +72,8 @@ class Processor {
     }
 
     if (message && Object.keys(message).length) {
-      switch (message.typ) {
-        case 'synchron.register':
-          await this.handleRegister(message);
-          break;
-        case 'synchron.deregister':
-          await this.handleDeregister(message);
-          break;
-        case 'synchron.suspend':
-          await this.handleSuspend(message);
-          break;
-        case 'synchron.resume':
-          await this.handleResume(message);
-          break;
-        case 'synchron.status':
-          await this.handleStatus(message);
-          break;
-        default:
-          await hydra.markQueueMessage(message, true);
-      }
+      await this.dispatchMessage(message);
+      await hydra.markQueueMessage(message, true);
       this.messageCheckDelay = 0;
     } else {
       this.messageCheckDelay += ONE_SECOND;
@@ -97,6 +84,31 @@ class Processor {
     setTimeout(async () => {
       await this.checkForTasks();
     }, this.messageCheckDelay);
+  }
+
+  /**
+   * @name dispatchMessage
+   * @description handles the dispatching of send and queue messages
+   * @param {object} message
+   */
+  async dispatchMessage(message) {
+    switch (message.typ) {
+      case 'synchron.register':
+        await this.handleRegister(message);
+        break;
+      case 'synchron.deregister':
+        await this.handleDeregister(message);
+        break;
+      case 'synchron.suspend':
+        await this.handleSuspend(message);
+        break;
+      case 'synchron.resume':
+        await this.handleResume(message);
+        break;
+      case 'synchron.status':
+        await this.handleStatus(message);
+        break;
+    }
   }
 
   /**
