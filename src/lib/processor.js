@@ -5,6 +5,7 @@ const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
 const MAX_MESSAGE_CHECK_DELAY = 5000; // five seconds
 const ONE_SECOND = 1000;
+const CHECK_SPAN = 2; // two seconds
 const THIS_SERVICE = 'hydra-synchron-svcs';
 
 /**
@@ -139,9 +140,7 @@ class Processor {
       const taskColl = await this.mdb.collection('tasks');
       const now = moment();
       const topRange = moment();
-      const nowts = ((new Date()).getTime() / 1000) | 0;
-      topRange.subtract(nowts - this.lastExecutionSweep, 'seconds');
-
+      topRange.subtract(CHECK_SPAN, 'seconds');
       const cursor = await taskColl.find({
         targetTime: {
           '$gt': new Date(topRange.toISOString()),
@@ -194,7 +193,6 @@ class Processor {
     }
     setTimeout(async () => {
       await this.checkForExecutableTasks();
-      this.lastExecutionSweep = ((new Date()).getTime() / 1000) | 0;
     }, ONE_SECOND);
   }
 
