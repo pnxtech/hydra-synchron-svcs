@@ -95,10 +95,10 @@ class Processor {
       if (this.messageCheckDelay > MAX_MESSAGE_CHECK_DELAY) {
         this.messageCheckDelay = MAX_MESSAGE_CHECK_DELAY;
       }
-    }   
+    }
     setTimeout(async () => {
       await this.checkForTasks();
-    }, this.messageCheckDelay);    
+    }, this.messageCheckDelay);
   }
 
   /**
@@ -274,7 +274,7 @@ class Processor {
         taskID: message.bdy.taskID,
         error: errorText
       }
-    }
+    };
     await hydra.sendReplyMessage(message, reply);
   }
 

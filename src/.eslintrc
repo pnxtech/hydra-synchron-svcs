@@ -2,9 +2,6 @@
   "extends": ["eslint:recommended", "google"],
   "parserOptions": {
     "ecmaVersion": 11,
-    "ecmaFeatures": {
-      "jsx": true
-    },
     "sourceType": "module"
   },
   "rules": {
@@ -16,6 +13,8 @@
         "return": "return"
       }
     }],
+    "no-return-await": "error",
+    "require-await": "error",
     "comma-dangle": 0,
     "curly": 2,
     "semi": [2, "always"],
@@ -90,10 +89,10 @@
     ]
   },
   "env": {
-    "browser": true,
+    "browser": false,
     "node": true,
     "es6": true,
-    "mocha": true
+    "mocha": false
   },
   "globals": {
     "-": "off"
