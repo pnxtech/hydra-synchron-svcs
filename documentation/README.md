@@ -70,7 +70,6 @@ Synchron can be sent one of the following types of messages.
 | synchron.suspend | Suspect a registered task |
 | synchron.resume | Resume a registered task |
 | synchron.status | Get the status of a registered task |
-| synchron.query | Query a list of registered tasks |
 
 > Important: synchron tasks are immutable. If you find that need to update an existing registered task you should deregister the task and register a new one.
 
@@ -252,28 +251,6 @@ There is one more optional key/value pair which can be added under the rule sect
 ```
 
 The `useTaskID` option allows you to override Synchron's autogeneration of taskIDs, allowing your application to provide one for use.  If you do this - it should go without saying that - you're reponsible form ensuring uniqueness across your cluster.  UUIDs as shown above should suffice.
-
-#### synchron.query
-
-The synchron service may be queried for a list of registered tasks.
-
-```js
-{
-  "to": "hydra-synchron-svcs:/",
-  "frm": "some-other-svcs:/",
-  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
-  "typ": "synchron.query",
-  "bdy": {
-    "query": {
-      "method": ""
-    }
-  }
-}
-```
-
-The bdy.query.method above may be one of the following values:
-
-
 
 #### frequency
 
