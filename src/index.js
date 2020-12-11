@@ -1,11 +1,10 @@
 const main = async () => {
   const hydraExpress = require('hydra-express');
   const hydra = hydraExpress.getHydra();
-  let HydraLogger = require('hydra-plugin-hls/hydra-express');
-  let hydraLogger = new HydraLogger();
+  const HydraLogger = require('hydra-plugin-hls/hydra-express');
+  const hydraLogger = new HydraLogger();
   hydraExpress.use(hydraLogger);
 
-  const mdb = require('./lib/mdb');
   const config = require('./config/config.json');
   const Processor = require('./lib/processor');
 
@@ -19,10 +18,7 @@ const main = async () => {
     console.log(`Started ${hydra.getServiceName()} (v.${hydra.getInstanceVersion()})`);
     console.log(serviceInfo);
 
-    await mdb.open(config.mongodb.connectionString);
-    console.log(`Database Connected: ${config.mongodb.connectionString}`);
-
-    let processor = new Processor();
+    const processor = new Processor(config);
     processor.init(config);
   } catch (err) {
     const stack = err.stack;

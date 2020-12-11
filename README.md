@@ -13,6 +13,7 @@ Recommended release: `pnxtech/hydra-synchron-svcs:1.0.1`
 
 #### Infrastructure requirements
 Synchron is a Hydra microservice and so an accessible instance of Redis is required.  Additionally, Synchron required an accessible instance of MongoDB.
+
 ## Raison d'être
 
 This service exists to solve the following key distributed computing problem.

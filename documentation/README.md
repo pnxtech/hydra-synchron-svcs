@@ -70,6 +70,7 @@ Synchron can be sent one of the following types of messages.
 | synchron.suspend | Suspect a registered task |
 | synchron.resume | Resume a registered task |
 | synchron.status | Get the status of a registered task |
+| synchron.query | Query a list of registered tasks |
 
 > Important: synchron tasks are immutable. If you find that need to update an existing registered task you should deregister the task and register a new one.
 
@@ -242,6 +243,28 @@ Here's fragment from the example we saw earlier:
 ```
 
 The required fields are `frequency` and `sendType`.  The `broadcast`, `updateMid` and `updateFrm` fields are optional.
+
+#### synchron.query
+
+The synchron service may be queried for a list of registered tasks.
+
+```js
+{
+  "to": "hydra-synchron-svcs:/",
+  "frm": "some-other-svcs:/",
+  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
+  "typ": "synchron.query",
+  "bdy": {
+    "query": {
+      "method": ""
+    }
+  }
+}
+```
+
+The bdy.query.method above may be one of the following values:
+
+
 
 #### frequency
 

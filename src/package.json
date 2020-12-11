@@ -1,6 +1,6 @@
 {
   "name": "hydra-synchron-svcs",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Hydra Syncronization Service",
   "main": "index.js",
   "scripts": {
@@ -15,5 +15,9 @@
     "hydra-plugin-hls": "0.2.6",
     "moment": "2.29.1",
     "mongodb": "3.6.3"
+  },
+  "devDependencies": {
+    "eslint": "7.15.0",
+    "eslint-config-google": "0.14.0"
   }
 }

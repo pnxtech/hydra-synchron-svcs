@@ -1,4 +1,4 @@
-FROM node:12
+FROM node:12-alpine
 LABEL maintainer="Carlos Justiniano cjus@ieee.org"
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
