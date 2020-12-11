@@ -5,7 +5,6 @@
 const hydraExpress = require('hydra-express');
 const express = hydraExpress.getExpress();
 const hydra = hydraExpress.getHydra();
-
 const api = new express.Router();
 
 /**

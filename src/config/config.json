@@ -2,6 +2,7 @@
   "mongodb": {
     "connectionString": "mongodb://mongo/synchron"
   },
+  "enableDebugTrace": false,
   "hydra": {
     "serviceName": "hydra-synchron-svcs",
     "serviceIP": "",

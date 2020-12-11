@@ -13,6 +13,7 @@
         "return": "return"
       }
     }],
+    "multiline-ternary": "always-multiline",
     "no-return-await": "error",
     "require-await": "error",
     "comma-dangle": 0,

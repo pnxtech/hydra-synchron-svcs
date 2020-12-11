@@ -244,6 +244,15 @@ Here's fragment from the example we saw earlier:
 
 The required fields are `frequency` and `sendType`.  The `broadcast`, `updateMid` and `updateFrm` fields are optional.
 
+There is one more optional key/value pair which can be added under the rule section:
+
+```js
+ "rule": {
+     "useTaskID": "a0dfd62b-b3fc-46a5-82aa-aa2c31646238"
+```
+
+The `useTaskID` option allows you to override Synchron's autogeneration of taskIDs, allowing your application to provide one for use.  If you do this - it should go without saying that - you're reponsible form ensuring uniqueness across your cluster.  UUIDs as shown above should suffice.
+
 #### synchron.query
 
 The synchron service may be queried for a list of registered tasks.

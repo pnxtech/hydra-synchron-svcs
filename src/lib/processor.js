@@ -5,8 +5,9 @@ const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
 const MAX_MESSAGE_CHECK_DELAY = 5000; // five seconds
 const ONE_SECOND = 1000;
-const CHECK_SPAN = 2; // two seconds
+const HALF_SECOND = 500;
 const THIS_SERVICE = 'hydra-synchron-svcs';
+
 
 /**
  * @name Processor
@@ -20,26 +21,26 @@ class Processor {
    */
   async init(config) {
     this.config = config;
-
+    this.enableDebugTrace = config.enableDebugTrace || false;
+    this.procTimeSpan = HALF_SECOND;
     try {
       this.mongoClient = new MongoClient(config.mongodb.connectionString, {
         useUnifiedTopology: true
       });
       await this.mongoClient.connect();
       this.mdb = this.mongoClient.db('synchron');
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('fatal', e);
     }
 
     this.messageCheckDelay = 0;
-    this.lastExecutionSweep = ((new Date()).getTime() / 1000) | 0;
-
     hydra.on('message', (message) => {
       this.dispatchMessage(message, true);
     });
 
     await this.refreshTasksOnLoad();
-    await this.checkForTasks();
+    this.checkForTasks();
     await this.checkForExecutableTasks();
   }
 
@@ -50,8 +51,8 @@ class Processor {
    */
   async refreshTasksOnLoad() {
     try {
-      const taskColl = await this.mdb.collection('tasks');
-      const cursor = await taskColl.find({
+      const taskColl = this.mdb.collection('tasks');
+      const cursor = taskColl.find({
         suspended: false
       }, {
         projection: {
@@ -71,7 +72,8 @@ class Processor {
           $set: task
         });
       });
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('fatal', e);
     }
   }
@@ -85,11 +87,12 @@ class Processor {
     let message;
     try {
       message = await hydra.getQueuedMessage(THIS_SERVICE);
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('fatal', e);
     }
     if (message && Object.keys(message).length) {
-      await this.dispatchMessage(message, false);
+      this.dispatchMessage(message, false);
       this.messageCheckDelay = 0;
     } else {
       this.messageCheckDelay += ONE_SECOND;
@@ -98,7 +101,7 @@ class Processor {
       }
     }
     setTimeout(async () => {
-      await this.checkForTasks();
+      this.checkForTasks();
     }, this.messageCheckDelay);
   }
 
@@ -112,19 +115,19 @@ class Processor {
   async dispatchMessage(message, sent) {
     switch (message.typ) {
       case 'synchron.register':
-        await this.handleRegister(message, sent);
+        this.handleRegister(message, sent);
         break;
       case 'synchron.deregister':
-        await this.handleDeregister(message, sent);
+        this.handleDeregister(message, sent);
         break;
       case 'synchron.suspend':
-        await this.handleSuspend(message, sent);
+        this.handleSuspend(message, sent);
         break;
       case 'synchron.resume':
-        await this.handleResume(message, sent);
+        this.handleResume(message, sent);
         break;
       case 'synchron.status':
-        await this.handleStatus(message, sent);
+        this.handleStatus(message, sent);
         break;
     }
   }
@@ -135,21 +138,29 @@ class Processor {
    * @return {object} promise
    */
   async checkForExecutableTasks() {
-    // hydraExpress.log('trace', 'checkForExecutableTasks');
+    // hydraExpress.hydraExpress.log('trace', 'checkForExecutableTasks');
+    const now = moment();
+    const topRange = moment();
+    const backRange = moment();
+
+    topRange.add(HALF_SECOND + this.procTimeSpan, 'ms');
+    backRange.subtract(HALF_SECOND + this.procTimeSpan, 'ms');
+
+    const targetTime = {
+      '$gt': new Date(backRange.toISOString()),
+      '$lt': new Date(topRange.toISOString())
+    };
     try {
-      const taskColl = await this.mdb.collection('tasks');
-      const now = moment();
-      const topRange = moment();
-      topRange.subtract(CHECK_SPAN, 'seconds');
-      const cursor = await taskColl.find({
-        targetTime: {
-          '$gt': new Date(topRange.toISOString()),
-          '$lt': new Date(now.toISOString())
-        },
+      const taskColl = this.mdb.collection('tasks');
+      const cursor = taskColl.find({
+        targetTime,
         suspended: false
       });
+      this.enableDebugTrace && hydraExpress.log('trace', ' ');
+      this.enableDebugTrace && hydraExpress.log('trace', `Query window: ${JSON.stringify(targetTime)}`);
       await cursor.forEach(async (task) => {
-        hydraExpress.log('trace', `Executing task: ${task.taskID} based on rule: ${JSON.stringify(task.rule)}`);
+        this.enableDebugTrace && hydraExpress.log('trace', `  Executing task: [${task.taskID}] based on rule: ${new Date(task.targetTime).toISOString()}`);
+        // hydraExpress.hydraExpress.log('trace', `Executing task: ${task.taskID} based on rule: ${JSON.stringify(task)}`);
         const mid = (task.rule.updateMid) ? uuid.v4() : task.message.mid;
         const frm = (task.rule.updateFrm) ? `${hydra.getInstanceID()}@${hydra.getServiceName()}:/` : task.message.frm;
         task.message = Object.assign({}, task.message, {
@@ -178,6 +189,7 @@ class Processor {
           offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
           task.targetTime = new Date(offset.toISOString());
           task.lastExecution = new Date(now.toISOString());
+          this.enableDebugTrace && hydraExpress.log('trace', `  Updating taskID ${task.taskID} for next execution at ${offset.toISOString()}`);
           delete task.rule;
           await taskColl.updateOne({
             taskID: task.taskID
@@ -188,9 +200,14 @@ class Processor {
           });
         }
       });
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('error', e);
     }
+    // double processing time to avoid missing items in shifting time window
+    this.procTimeSpan = moment().diff(now, 'ms') << 1;
+    this.enableDebugTrace && hydraExpress.log('trace', `  procTimeSpan: ${this.procTimeSpan}`);
+
     setTimeout(async () => {
       await this.checkForExecutableTasks();
     }, ONE_SECOND);
@@ -200,16 +217,16 @@ class Processor {
    * @name queueSuccess
    * @description queue a reply message for the sender with success
    * @param {object} message - response message
-   * @return {undefined}
+   * @return {Promise}
    */
-  async queueSuccess(message) {
+  queueSuccess(message) {
     const reply = hydra.createUMFMessage({
       to: message.frm,
       frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
       typ: message.typ,
       bdy: message.bdy
     }).toShort();
-    await hydra.queueMessage(reply);
+    return hydra.queueMessage(reply);
   }
 
   /**
@@ -217,26 +234,26 @@ class Processor {
    * @description send a reply message for the sender with success
    * @param {object} message - response message
    * @param {object} reply - reply message
-   * @return {undefined}
+   * @return {Promise}
    */
-  async sendSuccess(message, reply) {
-    await hydra.sendReplyMessage(message, reply);
+  sendSuccess(message, reply) {
+    return hydra.sendReplyMessage(message, reply);
   }
 
   /**
    * @name queueSuccess
    * @description queue a reply message for the sender with success
    * @param {object} message - response message
-   * @return {undefined}
+   * @return {Promise}
    */
-  async queueMessage(message) {
+  queueMessage(message) {
     const reply = hydra.createUMFMessage({
       to: message.to,
       frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
       typ: message.typ,
       bdy: message.bdy
     }).toShort();
-    await hydra.queueMessage(reply);
+    return hydra.queueMessage(reply);
   }
 
   /**
@@ -244,9 +261,9 @@ class Processor {
    * @description queue a reply message for the sender with an error
    * @param {object} message - original message
    * @param {string} errorText - error string
-   * @return {undefined}
+   * @return {Promise}
    */
-  async queueError(message, errorText) {
+  queueError(message, errorText) {
     const reply = hydra.createUMFMessage({
       to: message.frm,
       frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
@@ -256,7 +273,7 @@ class Processor {
         error: errorText
       }
     }).toShort();
-    await hydra.queueMessage(reply);
+    return hydra.queueMessage(reply);
   }
 
   /**
@@ -264,16 +281,16 @@ class Processor {
    * @description send a reply message for the sender with an error
    * @param {object} message - original message
    * @param {string} errorText - error string
-   * @return {undefined}
+   * @return {Promise}
    */
-  async sendError(message, errorText) {
+  sendError(message, errorText) {
     const reply = {
       bdy: {
         taskID: message.bdy.taskID,
         error: errorText
       }
     };
-    await hydra.sendReplyMessage(message, reply);
+    return hydra.sendReplyMessage(message, reply);
   }
 
   /**
@@ -320,7 +337,7 @@ class Processor {
       const parsedFrequency = this.parseFrequency(rule.frequency);
       if (parsedFrequency['oneTime'] !== undefined) {
         offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
-        const useTaskID = rule.useTaskID || uuid.v4();
+        const useTaskID = rule.useTaskID || v4();
         const updateMid = rule.updateMid || true;
         const updateFrm = rule.updateFrm || true;
         let broadcast = rule.broadcast || false;
@@ -341,22 +358,31 @@ class Processor {
           },
           message: Object.assign({}, message.bdy.message)
         };
+
         try {
-          const taskColl = await this.mdb.collection('tasks');
+          const taskColl = this.mdb.collection('tasks');
           await taskColl.insertOne(doc);
           const response = Object.assign({}, message);
           response.bdy = {
             taskID: doc.taskID
           };
-          await ((sent) ? this.sendSuccess(message, response) : this.queueSuccess(response));
+          await (sent
+            ? this.sendSuccess(message, response)
+            : this.queueSuccess(response));
           hydraExpress.log('trace', `Registered task ${doc.taskID} with rule: ${JSON.stringify(doc.rule)}`);
-        } catch (e) {
+        }
+        catch (e) {
           hydraExpress.log('error', e);
+        }
+        finally {
+
         }
       }
     } else {
       const note = 'missing bdy.rule';
-      await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+      await ((sent)
+        ? this.sendError(message, note)
+        : this.queueError(message, note));
     }
     (!sent) && await hydra.markQueueMessage(message, true);
   }
@@ -371,12 +397,14 @@ class Processor {
   async handleDeregister(message, sent) {
     if (!message.bdy.taskID) {
       const note = 'missing bdy.taskID';
-      await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+      await ((sent)
+        ? this.sendError(message, note)
+        : this.queueError(message, note));
       return;
     }
     try {
-      const taskColl = await this.mdb.collection('tasks');
-      const task = await taskColl.findOne({
+      const taskColl = this.mdb.collection('tasks');
+      const task = taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
@@ -385,22 +413,29 @@ class Processor {
       });
       if (!task) {
         const note = 'task not found';
-        await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+        await ((sent)
+          ? this.sendError(message, note) :
+          this.queueError(message, note));
       } else {
         const result = await taskColl.deleteOne({
           taskID: task.taskID
         });
         if (!result || !result.result.ok) {
           const note = 'task already deregistered';
-          await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+          await ((sent)
+            ? this.sendError(message, note)
+            : this.queueError(message, note));
         } else {
           const response = Object.assign({}, message);
-          await ((sent) ? this.sendSuccess(message, {}) : this.queueSuccess(response));
+          await ((sent)
+            ? this.sendSuccess(message, {}) :
+            this.queueSuccess(response));
           hydraExpress.log('trace', `Deregistered task ${task.taskID}`);
         }
       }
       (!sent) && await hydra.markQueueMessage(message, true);
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('error', e);
     }
   }
@@ -415,12 +450,14 @@ class Processor {
   async handleSuspend(message, sent) {
     if (!message.bdy.taskID) {
       const note = 'missing bdy.taskID';
-      await (sent) ? this.sendError(message, note) : this.queueError(message, note);
+      await ((sent)
+        ? this.sendError(message, note)
+        : this.queueError(message, note));
       return;
     }
     try {
-      const taskColl = await this.mdb.collection('tasks');
-      const task = await taskColl.findOne({
+      const taskColl = this.mdb.collection('tasks');
+      const task = taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
@@ -429,7 +466,9 @@ class Processor {
       });
       if (!task) {
         const note = 'task not found';
-        await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+        await ((sent)
+          ? this.sendError(message, note) :
+          this.queueError(message, note));
       } else {
         const result = await taskColl.updateOne({
           taskID: message.bdy.taskID
@@ -440,15 +479,20 @@ class Processor {
         });
         if (!result || !result.result.nModified) {
           const note = 'task already suspended';
-          await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+          await ((sent)
+            ? this.sendError(message, note)
+            : this.queueError(message, note));
         } else {
           const response = Object.assign({}, message);
-          await ((sent) ? this.sendSuccess(message, {}) : this.queueSuccess(response));
+          await ((sent)
+            ? this.sendSuccess(message, {})
+            : this.queueSuccess(response));
           hydraExpress.log('trace', `Suspending task ${message.bdy.taskID}`);
         }
       }
       (!sent) && await hydra.markQueueMessage(message, true);
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('error', e);
     }
   }
@@ -463,12 +507,14 @@ class Processor {
   async handleResume(message, sent) {
     if (!message.bdy.taskID) {
       const note = 'missing bdy.taskID';
-      await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+      await ((sent)
+        ? this.sendError(message, note) :
+        this.queueError(message, note));
       return;
     }
     try {
-      const taskColl = await this.mdb.collection('tasks');
-      const task = await taskColl.findOne({
+      const taskColl = this.mdb.collection('tasks');
+      const task = taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
@@ -478,7 +524,9 @@ class Processor {
       });
       if (!task) {
         const note = 'task not found';
-        await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+        await ((sent)
+          ? this.sendError(message, note)
+          : this.queueError(message, note));
       } else {
         const offset = moment();
         offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
@@ -492,15 +540,20 @@ class Processor {
         });
         if (!result || !result.result.nModified) {
           const note = 'task already resumed';
-          await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+          await ((sent)
+            ? this.sendError(message, note)
+            : this.queueError(message, note));
         } else {
           const response = Object.assign({}, message);
-          await ((sent) ? this.sendSuccess(message, {}) : this.queueSuccess(response));
+          await ((sent)
+            ? this.sendSuccess(message, {})
+            : this.queueSuccess(response));
           hydraExpress.log('trace', `Resuming task ${message.bdy.taskID}, scheduled to execute at ${offset.toISOString()}`);
         }
       }
       (!sent) && await hydra.markQueueMessage(message, true);
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('error', e);
     }
   }
@@ -515,11 +568,13 @@ class Processor {
   async handleStatus(message, sent) {
     if (!message.bdy.taskID) {
       const note = 'missing bdy.taskID';
-      await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+      await ((sent)
+        ? this.sendError(message, note)
+        : this.queueError(message, note));
       return;
     }
     try {
-      const taskColl = await this.mdb.collection('tasks');
+      const taskColl = this.mdb.collection('tasks');
       const task = await taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
@@ -531,15 +586,20 @@ class Processor {
       });
       if (!task) {
         const note = 'task not found';
-        await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
+        await ((sent)
+          ? this.sendError(message, note)
+          : this.queueError(message, note));
       } else {
         const response = Object.assign({}, message);
         response.bdy = task;
-        await ((sent) ? this.sendSuccess(message, response) : await this.queueSuccess(response));
+        await ((sent)
+          ? this.sendSuccess(message, response)
+          : await this.queueSuccess(response));
         hydraExpress.log('trace', `Status requested for task ${message.bdy.taskID}: ${JSON.stringify(task)}`);
       }
       (!sent) && await hydra.markQueueMessage(message, true);
-    } catch (e) {
+    }
+    catch (e) {
       hydraExpress.log('error', e);
     }
   }

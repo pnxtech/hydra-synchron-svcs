@@ -20,7 +20,8 @@ const main = async () => {
 
     const processor = new Processor(config);
     processor.init(config);
-  } catch (err) {
+  }
+  catch (err) {
     const stack = err.stack;
     console.error(stack);
   }
