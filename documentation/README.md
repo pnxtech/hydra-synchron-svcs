@@ -342,6 +342,9 @@ Synchron uses the moment.js library to implement the above functionality.
 
 Above from the [Moment.js](https://momentjs.com/docs/#/manipulating/add/) documentation
 
+##### Latency
+Synchron has a scheduling accurancy of 1 millisecond, however delivery of scheduled tasks has a variable latency dependant on network and processing delays in your cluster.
+
 > Important: The use of tasks frequencies of under a second (i.e. milliseconds) is NOT supported.
 
 > Additionally: When using frequencies of under a minute (i.e. seconds) keep in mind that the time a task is set to execute is dependant on when it was recieved by the Synchron service and not when it was sent by the sending service.  Although message queuing occurs in sub-millisecond timeframes, a heavily overloaded system might encounter latencies.  Your load testing efforts should help you identify latencies in your specific applications and architectures.

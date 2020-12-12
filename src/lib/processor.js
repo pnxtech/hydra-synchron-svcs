@@ -5,7 +5,6 @@ const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
 const MAX_MESSAGE_CHECK_DELAY = 5000; // five seconds
 const ONE_SECOND = 1000;
-const HALF_SECOND = 500;
 const THIS_SERVICE = 'hydra-synchron-svcs';
 
 
@@ -21,8 +20,8 @@ class Processor {
    */
   async init(config) {
     this.config = config;
+    this.backRange = moment();
     this.enableDebugTrace = config.enableDebugTrace || false;
-    this.procTimeSpan = HALF_SECOND;
     try {
       this.mongoClient = new MongoClient(config.mongodb.connectionString, {
         useUnifiedTopology: true
@@ -141,18 +140,20 @@ class Processor {
    * @return {object} promise
    */
   async checkForExecutableTasks() {
-    // hydraExpress.hydraExpress.log('trace', 'checkForExecutableTasks');
     const now = moment();
     const topRange = moment();
-    const backRange = moment();
-
-    topRange.add(HALF_SECOND + this.procTimeSpan, 'ms');
-    backRange.subtract(HALF_SECOND + this.procTimeSpan, 'ms');
+    this.backRange.add(1, 'ms');
 
     const targetTime = {
-      '$gt': new Date(backRange.toISOString()),
-      '$lt': new Date(topRange.toISOString())
+      '$gte': new Date(this.backRange.toISOString()),
+      '$lte': new Date(topRange.toISOString())
     };
+
+    // console.log(' ');
+    // console.log(`${this.backRange.toISOString()}`);
+    // console.log(`${topRange.toISOString()}`);
+    // console.log(' ');
+
     try {
       const taskColl = this.mdb.collection('tasks');
       const cursor = taskColl.find({
@@ -207,9 +208,8 @@ class Processor {
     catch (e) {
       hydraExpress.log('error', e);
     }
-    // double processing time to avoid missing items in shifting time window
-    this.procTimeSpan = moment().diff(now, 'ms') << 1;
-    this.enableDebugTrace && hydraExpress.log('trace', `  procTimeSpan: ${this.procTimeSpan}`);
+
+    this.backRange = topRange;
 
     setTimeout(async () => {
       await this.checkForExecutableTasks();
