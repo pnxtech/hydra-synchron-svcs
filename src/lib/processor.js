@@ -129,7 +129,10 @@ class Processor {
       case 'synchron.status':
         this.handleStatus(message, sent);
         break;
-    }
+      case 'synchron.query':
+        this.handleQuery(message, sent);
+        break;
+      }
   }
 
   /**
@@ -597,6 +600,71 @@ class Processor {
           : await this.queueSuccess(response));
         hydraExpress.log('trace', `Status requested for task ${message.bdy.taskID}: ${JSON.stringify(task)}`);
       }
+      (!sent) && await hydra.markQueueMessage(message, true);
+    }
+    catch (e) {
+      hydraExpress.log('error', e);
+    }
+  }
+
+  /**
+   * @name handleQuery
+   * @description handle incoming Query message
+   * @param {object} message - incoming message
+   * @param {boolean} sent - was the message sent or queued
+   * @return {undefined}
+   */
+  async handleQuery(message, sent) {
+    if (!message.bdy.query || !message.bdy.query.method) {
+      const note = 'missing bdy.query or bdy.query.method';
+      await ((sent)
+        ? this.sendError(message, note)
+        : this.queueError(message, note));
+      return;
+    }
+    let query = {};
+    const method = message.bdy.query.method;
+    const details = message.bdy.query.details;
+    switch (method) {
+      case 'all':
+        break;
+      case 'active':
+        query.suspended = false;
+        break;
+      case 'suspended':
+        query.suspended = true;
+        break;
+      default: {
+        const note = 'invalid query method';
+        await ((sent)
+          ? this.sendError(message, note)
+          : this.queueError(message, note));
+        return;
+      }
+    };
+    let detailsProjection = {
+      _id: 0
+    };
+    if (!details || details !== 'full') {
+      detailsProjection.rule = 0;
+      detailsProjection.message = 0;
+    }
+    try {
+      const taskColl = this.mdb.collection('tasks');
+      const cursor = taskColl.find(query, {
+        projection: detailsProjection
+      });
+      let results = [];
+      await cursor.forEach(async (task) => {
+        results.push(Object.assign({}, task));
+      });
+      const response = Object.assign({}, message);
+      response.bdy = {
+        tasks: results
+      };
+      await ((sent)
+        ? this.sendSuccess(response, {}) :
+        this.queueSuccess(response));
       (!sent) && await hydra.markQueueMessage(message, true);
     }
     catch (e) {

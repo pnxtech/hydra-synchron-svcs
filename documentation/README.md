@@ -70,6 +70,7 @@ Synchron can be sent one of the following types of messages.
 | synchron.suspend | Suspect a registered task |
 | synchron.resume | Resume a registered task |
 | synchron.status | Get the status of a registered task |
+| synchron.query | Query registered tasks |
 
 > Important: synchron tasks are immutable. If you find that need to update an existing registered task you should deregister the task and register a new one.
 
@@ -224,6 +225,60 @@ The sending service will be sent a returned message with the status of the task:
 The `to` and `frm` fields are reversed upon receipt.
 
 If an error occurs the bdy.taskID will be retained and an bdy.error will indicated the error encounted.
+
+#### synchron.query
+Registered tasks can be queried by others services working in collaboration with the Synchron service.
+
+```javascript
+{
+  "to": "hydra-synchron-svcs:/",
+  "frm": "some-other-svcs:/",
+  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
+  "typ": "synchron.query",
+  "bdy": {
+    "query": {
+      "method": "{one of the methods below}",
+      "details": "{one of the detail levels below}"
+    }
+  }
+}
+```
+
+| Method | Usage |
+|------|-------|
+| all | Return all tasks |
+| active | Return all active tasks |
+| suspended | Remove a registered tasks |
+
+| Details | Usage |
+|------|-------|
+| full | Return rule and message contents |
+| header | Only returns the message header to, frm, mid, ts, typ and ver fields |
+
+The use of the details field is optional and defaults to "header" returning only partial task information.
+
+The response of a query is a list of zero or more `tasks` and their statuses.
+
+```js
+{
+  "to": "client:/",
+  "frm": "hydra-synchron-svcs:/",
+  "mid": "89964657-ec2c-44a0-baec-d983c42cbd21",
+  "ts": "2020-11-27T18:04:32.503Z",
+  "typ": "synchron.query",
+  "ver": "UMF/1.4.6",
+  "bdy": {
+    "tasks": [
+      {
+        "taskID": "bde3cead-74af-47f5-a0f5-de7d4f436324",
+        "targetTime": "2020-11-27T18:04:36.162Z",
+        "suspended": false,
+        "lastExecution": "2020-11-27T18:04:31.159Z"
+      }
+    ]
+  }
+}
+```
 
 ## Rules
 
