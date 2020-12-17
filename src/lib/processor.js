@@ -34,12 +34,12 @@ class Processor {
     }
 
     this.messageCheckDelay = 0;
-    hydra.on('message', (message) => {
-      this.dispatchMessage(message, true);
+    hydra.on('message', async (message) => {
+      await this.dispatchMessage(message, true);
     });
 
     await this.refreshTasksOnLoad();
-    this.checkForTasks();
+    await this.checkForTasks();
     await this.checkForExecutableTasks();
   }
 
@@ -100,7 +100,7 @@ class Processor {
       }
     }
     setTimeout(async () => {
-      this.checkForTasks();
+      await this.checkForTasks();
     }, this.messageCheckDelay);
   }
 
