@@ -340,7 +340,7 @@ class Processor {
       const parsedFrequency = this.parseFrequency(rule.frequency);
       if (parsedFrequency['oneTime'] !== undefined) {
         offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
-        const useTaskID = rule.useTaskID || v4();
+        const useTaskID = rule.useTaskID || uuid.v4();
         const updateMid = rule.updateMid || true;
         const updateFrm = rule.updateFrm || true;
         let broadcast = rule.broadcast || false;
@@ -407,7 +407,7 @@ class Processor {
     }
     try {
       const taskColl = this.mdb.collection('tasks');
-      const task = taskColl.findOne({
+      const task = await taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
@@ -460,7 +460,7 @@ class Processor {
     }
     try {
       const taskColl = this.mdb.collection('tasks');
-      const task = taskColl.findOne({
+      const task = await taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
@@ -517,7 +517,7 @@ class Processor {
     }
     try {
       const taskColl = this.mdb.collection('tasks');
-      const task = taskColl.findOne({
+      const task = await taskColl.findOne({
         taskID: message.bdy.taskID
       }, {
         projection: {
