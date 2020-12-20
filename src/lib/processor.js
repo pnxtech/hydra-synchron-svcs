@@ -1,11 +1,13 @@
+const THIS_SERVICE = 'hydra-synchron-svcs';
 const hydraExpress = require('hydra-express');
 const hydra = hydraExpress.getHydra();
 const moment = require('moment');
 const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
-const MAX_MESSAGE_CHECK_DELAY = 5000; // five seconds
-const ONE_SECOND = 1000;
-const THIS_SERVICE = 'hydra-synchron-svcs';
+
+const MIN_MESSAGE_CHECK_DELAY = 0; // 0 milliseconds
+const MAX_MESSAGE_CHECK_DELAY = 100; // 100 milliseconds
+const MESSAGE_CHECK_DELAY = 10; // 10 milliseconds
 
 
 /**
@@ -92,12 +94,9 @@ class Processor {
     }
     if (message && Object.keys(message).length) {
       this.dispatchMessage(message, false);
-      this.messageCheckDelay = 0;
+      this.messageCheckDelay = MIN_MESSAGE_CHECK_DELAY;
     } else {
-      this.messageCheckDelay += ONE_SECOND;
-      if (this.messageCheckDelay > MAX_MESSAGE_CHECK_DELAY) {
-        this.messageCheckDelay = MAX_MESSAGE_CHECK_DELAY;
-      }
+      this.messageCheckDelay = Math.min(Math.max(this.messageCheckDelay + MESSAGE_CHECK_DELAY, MIN_MESSAGE_CHECK_DELAY), MAX_MESSAGE_CHECK_DELAY);
     }
     setTimeout(async () => {
       await this.checkForTasks();
