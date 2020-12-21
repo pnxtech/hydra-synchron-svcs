@@ -5,6 +5,7 @@ const moment = require('moment');
 const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
 
+const ONE_SECOND = 1000; //1000 milliseconds
 const MIN_MESSAGE_CHECK_DELAY = 0; // 0 milliseconds
 const MAX_MESSAGE_CHECK_DELAY = 100; // 100 milliseconds
 const MESSAGE_CHECK_DELAY = 10; // 10 milliseconds
