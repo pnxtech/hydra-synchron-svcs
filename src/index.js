@@ -9,6 +9,9 @@ const main = async () => {
   const Processor = require('./lib/processor');
 
   try {
+    if (process.env.REDIS_CONNECTION_STRING) {
+      config.hydra.redis.url = process.env.REDIS_CONNECTION_STRING;
+    }
     const serviceInfo = await hydraExpress.init(config, config.hydra.serviceVersion, () => {
       hydraExpress.registerRoutes({
         '/v1/synchron': require('./routes/synchron-v1-routes')

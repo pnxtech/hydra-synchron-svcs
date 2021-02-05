@@ -26,6 +26,9 @@ class Processor {
     this.backRange = moment();
     this.enableDebugTrace = config.enableDebugTrace || false;
     try {
+      if (process.env.MONGO_CONNECTION_STRING) {
+        config.mongodb.connectionString = process.env.MONGO_CONNECTION_STRING;
+      }
       this.mongoClient = new MongoClient(config.mongodb.connectionString, {
         useUnifiedTopology: true
       });

@@ -1,6 +1,6 @@
 {
   "mongodb": {
-    "connectionString": "mongodb://mongo/synchron"
+    "connectionString": "mongodb://mongo"
   },
   "enableDebugTrace": false,
   "hydra": {
