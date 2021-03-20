@@ -2,6 +2,8 @@
 #### Main: [⇧](../README.md)
 ---
 
+<img src="assets/synchron.png" width="300px" />
+
 ## How it works:
 
 The Hydra-synchron-svcs implements these features:
@@ -14,6 +16,7 @@ The Hydra-synchron-svcs implements these features:
 * All tasks are stored in a Mongo database allowing for the synchron service to be restarted.
 * When a task is ready for execution, Synchron can either use a `hydra.sendMessage` or `hydra.queueMessage` to notify the intended recipient service.  The notification is essentially just the registered sub-message.
 * Tasks can be registered (created), deregistered (deleted), suspended, resumed, and their status can be queried.  However, tasks are immutable. If you need to update a task you should deregister it and then register a new one.
+* As of version 1.2.2, Synchon supports the use of complex frequencies using the [cron](https://en.wikipedia.org/wiki/Cron).
 
 Here's an example of a registration message:
 
@@ -309,7 +312,11 @@ The `useTaskID` option allows you to override Synchron's autogeneration of taskI
 
 #### frequency
 
-The `frequency` field contains simple English phrases such as:
+The `frequency` field supports both simple and complex frequency specifiers. The complex specifier uses the [cron](https://en.wikipedia.org/wiki/Cron) format.
+
+<u><b>Simple</b></u>
+
+The `frequency` field can contain simple English phrases such as:
 
 * every 10 seconds
 * every 1 minutes
@@ -340,12 +347,51 @@ Synchron uses the moment.js library to implement the above functionality.
 | minutes	| m |
 | seconds	| s |
 
-Above from the [Moment.js](https://momentjs.com/docs/#/manipulating/add/) documentation
+Above from the [Moment.js](https://momentjs.com/docs/#/manipulating/add/) documentation.
+
+<u><b>Complex (cron)</b></u>
+
+Frequencies specified in the [cron](https://en.wikipedia.org/wiki/Cron) format can represent schedules such a "every 5 minutes on the hours on Wednesday's and Fridays".
+
+Synchron detects the use of the cron format when a frequency does not begin with the words `every` or `in`.
+
+```js
+    "rule": {
+      "frequency": "1 0 * * *"
+    },
+```
+
+The above frequency specifies to execute at one minute past midnight on every day.
+
+And this next one executes every 15th minute.
+
+```js
+    "rule": {
+      "frequency": "*/15 * * * *"
+    },
+```
+
+Synchron supports frequencies in seconds so this next example executes every 5 seconds.
+
+
+```js
+    "rule": {
+      "frequency": "*/5 * * * * *"
+    },
+```
+
+Note that the above frequency contains six fields rather than the five fields we've seen. When six fields are present the first field represents seconds.
+
+> Super Important: Synchron tracks time in UTC.  So when creating frequencies in cron format with specific dates and times in mind you need to specify them in the UTC timezone.
+> Additionally, although Synchron supports scheduled events in seconds - the use of lower than 2 seconds should not be specified.
+> When using the cron format, you should deregister a task that is only intended to execute once.  Otherwise you may see re-executions on tasks that are set for specific dates.
+
+You may find the [chrontab guru](https://crontab.guru/) tool useful.
 
 ##### Latency
 Synchron has a scheduling accurancy of 1 millisecond, however delivery of scheduled tasks has a variable latency dependant on network and processing delays in your cluster.
 
-> Important: The use of tasks frequencies of under a second (i.e. milliseconds) is NOT supported.
+> Important: The use of tasks frequencies of under a second (i.e. milliseconds) is NOT supported. For safely, specify greater than 1 second events.
 
 > Additionally: When using frequencies of under a minute (i.e. seconds) keep in mind that the time a task is set to execute is dependant on when it was recieved by the Synchron service and not when it was sent by the sending service.  Although message queuing occurs in sub-millisecond timeframes, a heavily overloaded system might encounter latencies.  Your load testing efforts should help you identify latencies in your specific applications and architectures.
 

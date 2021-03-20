@@ -2,6 +2,7 @@ const THIS_SERVICE = 'hydra-synchron-svcs';
 const hydraExpress = require('hydra-express');
 const hydra = hydraExpress.getHydra();
 const moment = require('moment');
+const later = require('later');
 const uuid = require('uuid');
 const {MongoClient} = require('mongodb');
 
@@ -67,8 +68,18 @@ class Processor {
         }
       });
       await cursor.forEach(async (task) => {
-        const offset = moment();
-        offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
+        let offset;
+        let parsedFrequency;
+        if (task.rule.frequency['offset'] !== undefined) {
+          parsedFrequency = this.parseFrequency(task.rule.frequency.offset);
+          offset = moment();
+          offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+        } else {
+          parsedFrequency = this.parseFrequency(task.rule.frequency.cron);
+          const sched = later.parse.cron(parsedFrequency['cron'], parsedFrequency['cronHasSeconds']);
+          offset = moment(later.schedule(sched).next());
+          offset.add(1, 'seconds');
+        }
         task.targetTime = new Date(offset.toISOString());
         delete task.rule;
         await taskColl.updateOne({
@@ -192,8 +203,15 @@ class Processor {
           });
           hydraExpress.log('trace', `Deregistered onetime task ${task.taskID}`);
         } else {
-          const offset = moment();
-          offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
+          let offset = moment();
+          const parsedFrequency = this.parseFrequency(task.rule.frequency['cron'] || task.rule.frequency['offset'][1]);
+          if (parsedFrequency['cronSegmentLength'] === 5 || parsedFrequency['cronSegmentLength'] === 6) {
+            const sched = later.parse.cron(parsedFrequency['cron'], parsedFrequency['cronHasSeconds']);
+            offset = moment(later.schedule(sched).next());
+            offset.add(1, 'seconds');
+          } else {
+            offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+          }
           task.targetTime = new Date(offset.toISOString());
           task.lastExecution = new Date(now.toISOString());
           this.enableDebugTrace && hydraExpress.log('trace', `  Updating taskID ${task.taskID} for next execution at ${offset.toISOString()}`);
@@ -321,6 +339,12 @@ class Processor {
         segs.shift();
         result['oneTime'] = false;
         result['offset'] = segs;
+      } else {
+        // frequency is neither 'every' or 'in' so it must be 'cron'
+        result['oneTime'] = false;
+        result['cron'] = feq;
+        result['cronSegmentLength'] = feq.split(' ').length;
+        result['cronHasSeconds'] = (result['cronSegmentLength'] === 6) ? true : false;
       }
     }
     return result;
@@ -339,10 +363,24 @@ class Processor {
       await ((sent) ? this.sendError(message, note) : this.queueError(message, note));
     } else if (message.bdy.rule) {
       const rule = message.bdy.rule;
-      const offset = moment();
+      let offset = moment();
       const parsedFrequency = this.parseFrequency(rule.frequency);
       if (parsedFrequency['oneTime'] !== undefined) {
-        offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+        if (parsedFrequency['cron'] !== undefined) {
+          if (parsedFrequency['cronSegmentLength'] !== 5 && parsedFrequency['cronSegmentLength'] !== 6) {
+            const note = 'invalid frequency format';
+            await ((sent)
+              ? this.sendError(message, note)
+              : this.queueError(message, note));
+            return;
+          } else {
+            const sched = later.parse.cron(parsedFrequency['cron'], parsedFrequency['cronHasSeconds']);
+            offset = moment(later.schedule(sched).next());
+            offset.add(1, 'seconds');
+          }
+        } else {
+          offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+        }
         const useTaskID = rule.useTaskID || uuid.v4();
         const updateMid = rule.updateMid || true;
         const updateFrm = rule.updateFrm || true;
@@ -548,8 +586,15 @@ class Processor {
           ? this.sendError(message, note)
           : this.queueError(message, note));
       } else {
-        const offset = moment();
-        offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
+        let offset = moment();
+        const parsedFrequency = this.parseFrequency(task.rule.frequency['cron'] || task.rule.frequency['offset'][1]);
+        if (parsedFrequency['cronSegmentLength'] === 5 || parsedFrequency['cronSegmentLength'] === 6) {
+          const sched = later.parse.cron(parsedFrequency['cron'], parsedFrequency['cronHasSeconds']);
+          offset = moment(later.schedule(sched).next());
+          offset.add(1, 'seconds');
+        } else {
+          offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+        }
         const result = await taskColl.updateOne({
           taskID: message.bdy.taskID
         }, {

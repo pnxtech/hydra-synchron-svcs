@@ -1,6 +1,6 @@
 {
   "name": "hydra-synchron-svcs",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "Hydra Syncronization Service",
   "main": "index.js",
   "scripts": {
@@ -13,6 +13,7 @@
     "dotenv": "5.0.1",
     "hydra-express": "1.8.3",
     "hydra-plugin-hls": "0.2.6",
+    "later": "1.2.0",
     "moment": "2.29.1",
     "mongodb": "3.6.3"
   },
