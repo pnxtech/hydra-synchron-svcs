@@ -367,6 +367,20 @@ class Processor {
 
         try {
           const taskColl = this.mdb.collection('tasks');
+          const task = await taskColl.findOne({
+            taskID: doc.taskID
+          }, {
+            projection: {
+              taskID: 1
+            }
+          });
+          if (task) {
+            const note = 'taskID already exists';
+            await ((sent)
+              ? this.sendError(message, note)
+              : this.queueError(message, note));
+            return;
+          }
           await taskColl.insertOne(doc);
           const response = Object.assign({}, message);
           response.bdy = {

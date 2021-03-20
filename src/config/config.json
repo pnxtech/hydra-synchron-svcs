@@ -7,7 +7,7 @@
     "serviceName": "hydra-synchron-svcs",
     "serviceIP": "",
     "servicePort": 11111,
-    "serviceType": "Queuing",
+    "serviceType": "event",
     "serviceDescription": "Hydra Synchronization Service",
     "plugins": {
       "hydraLogger": {
