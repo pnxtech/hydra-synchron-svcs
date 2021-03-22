@@ -71,9 +71,8 @@ class Processor {
         let offset;
         let parsedFrequency;
         if (task.rule.frequency['offset'] !== undefined) {
-          parsedFrequency = this.parseFrequency(task.rule.frequency.offset);
           offset = moment();
-          offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+          offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
         } else {
           parsedFrequency = this.parseFrequency(task.rule.frequency.cron);
           const sched = later.parse.cron(parsedFrequency['cron'], parsedFrequency['cronHasSeconds']);
@@ -210,7 +209,7 @@ class Processor {
             offset = moment(later.schedule(sched).next());
             offset.add(1, 'seconds');
           } else {
-            offset.add(parsedFrequency.offset[0], parsedFrequency.offset[1]);
+            offset.add(task.rule.frequency.offset[0], task.rule.frequency.offset[1]);
           }
           task.targetTime = new Date(offset.toISOString());
           task.lastExecution = new Date(now.toISOString());
