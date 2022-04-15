@@ -12,7 +12,7 @@
     "plugins": {
       "hydraLogger": {
         "logToConsole": true,
-        "onlyLogLocally": false
+        "onlyLogLocally": true
       }
     },
     "redis": {
