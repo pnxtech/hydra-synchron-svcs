@@ -1,6 +1,8 @@
 const THIS_SERVICE = 'hydra-synchron-svcs';
 const hydraExpress = require('hydra-express');
 const hydra = hydraExpress.getHydra();
+const UMFMessage = hydra.getUMFMessageHelper();
+
 const moment = require('moment');
 const later = require('later');
 const uuid = require('uuid');
@@ -195,6 +197,27 @@ class Processor {
           } else {
             await hydra.sendMessage(task.message);
           }
+        } else if (task.rule.sendType === 'rest') {
+          let parsedRoute = UMFMessage.parseRoute(task.rule.callbackUrl);
+          let serviceInstances = await hydra.getServicePresence(parsedRoute.serviceName);
+          if (task.rule.broadcast) {
+            serviceInstances.forEach((si) => {
+              let to = `${si.instanceID}@${parsedRoute.serviceName}:[${parsedRoute.httpMethod}]${parsedRoute.apiRoute}`;
+              let msg = UMFMessage.createMessage({
+                to,
+                frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+                bdy: task.message
+              });
+              hydra.makeAPIRequest(msg);
+            });
+          } else {
+            let msg = UMFMessage.createMessage({
+              to: task.rule.callbackUrl,
+              frm: `${hydra.getInstanceID()}@${hydra.getServiceName()}:/`,
+              bdy: task.message
+            });
+            await hydra.makeAPIRequest(msg);
+          }
         }
         if (task.rule.frequency.oneTime) {
           await taskColl.deleteOne({
@@ -384,6 +407,7 @@ class Processor {
         const updateMid = rule.updateMid || true;
         const updateFrm = rule.updateFrm || true;
         let broadcast = rule.broadcast || false;
+        let callbackUrl = rule.callbackUrl;
         const sendType = rule.sendType;
         if (rule.sendType === 'queue') {
           broadcast = false;
@@ -395,6 +419,7 @@ class Processor {
           rule: {
             frequency: parsedFrequency,
             sendType,
+            callbackUrl,
             broadcast,
             updateMid,
             updateFrm

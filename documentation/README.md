@@ -441,7 +441,53 @@ As we've seen earlier, an executable task consists of both a `rule` and a `messa
 
 > Important: It's important that the message remain relatively small (ideally under 256K) because the underlying queuing is implemented using Redis Pub/Sub.  In order to keep your task messages small, consider using a reference indicating which points to a data store your service is using.
 
+## HTTP Callback support
+As of version 1.3.2, HydraSynchron now supports sending (calling) HTTP based callbacks.
+
+
+```javascript
+{
+  "to": "hydra-synchron-svcs:/",
+  "frm": "some-other-svcs:/",
+  "mid": "f6d23d41-9698-47c8-b859-68240bead9d1",
+  "typ": "synchron.register",
+  "bdy": {
+    "rule": {
+      "frequency": "every 15 hours",
+      "sendType": "rest",
+      "callbackUrl": "[get]/v1/service-name/path",
+      "broadcast": true,
+      "updateMid": true,
+      "updateFrm": true
+    },
+    "message": {
+      "to": "some-other-svcs:/",
+      "frm": "some-other-svcs:/",
+      "mid": "4a2c6968-90d7-4ede-b2d4-9c768ce46d49",
+      "typ": "perform.sweep",
+      "bdy": {
+        "actions": {}
+      }
+    }
+  }
+}
+```
+
+In the above example, the bdy.rule section contains a `sendType` of `rest`.   The `rest` value refers to RESTful (i.e. http or https).  In addition to the use of `rest` is a required field called `callbackUrl`. This is the URL string that refers to your services HTTP RESTful endpoint.  The format for specifying URLs is the Hydra URL format as shown below:
+
+[get]/v1/service-name/path
+
+The URL is prefixed with the HTTP verb your service requires.  That's typically `get` or `post`.  The next requirement is the `v1/service-name` portion which specifies the registered name of your service. The remaining portion is the remainder of your endpoint path.
+
+If you specify that `broadcast` is set to `true` then HydraSynchron will broadcast the callback to each instance of your microservice. Meaning that each instance will have the API endpoint invoked.  Setting `broadcast` to `false` will mean that only one instance of your service will be called.
+
+If your API endpoint is set up to only respond to `get` requests then you may set the `bdy.message` body to an empty object {}
+
+```javascript
+    "message": {}
+```
+
 ## Additional requirements
 
-* Task messages must be sent to the Synchron service via Hydra Sending or Queuing.  Synchron does not currently have an HTTP endpoint.
+* Task messages must be sent to the Synchron service via Hydra Sending or Queuing.  Synchron does not currently have an HTTP endpoint.  However, messages can be queued using the hydra-router HTTP /v1/router/queue endpoint.
 * All task messages must be in ["short-form" UMF format](https://github.com/pnxtech/umf/blob/master/umf.md#6-short-form-syntax).

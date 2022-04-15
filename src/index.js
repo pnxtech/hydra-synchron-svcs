@@ -1,9 +1,9 @@
 const main = async () => {
   const hydraExpress = require('hydra-express');
   const hydra = hydraExpress.getHydra();
-  const HydraLogger = require('hydra-plugin-hls/hydra-express');
-  const hydraLogger = new HydraLogger();
-  hydraExpress.use(hydraLogger);
+  // const HydraLogger = require('hydra-plugin-hls/hydra-express');
+  // const hydraLogger = new HydraLogger();
+  // hydraExpress.use(hydraLogger);
 
   const config = require('./config/config.json');
   const Processor = require('./lib/processor');
